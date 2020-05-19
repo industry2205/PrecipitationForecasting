@@ -88,14 +88,9 @@ def augmentation(x_train,y_train):
     return x_train, y_train
   
  
-AUTO = tf.data.experimental.AUTOTUNE
-batch_size = 256
-train_path = '/kaggle/input/dacon-project1/train'
-train_files = sorted(glob.glob(train_path + '/*'))
-num = len(train_files*4*2)
-
-
 # Dataset을 Generation 형태로 변환
+AUTO = tf.data.experimental.AUTOTUNE # Prefetch를 사용하여 속도 효율 
+
 def trainGenerator():
     train_path = '/kaggle/input/dacon-project1/train'
     train_files = sorted(glob.glob(train_path + '/*'))
