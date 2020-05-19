@@ -1,18 +1,9 @@
 import glob
 import pandas as pd
 import numpy as np
-import matplotlib.pylab as plt
-import seaborn as sns
 from tqdm import tqdm
 import os
-import random
 import tensorflow as tf
-from tensorflow.keras.layers import Dense, Conv2D, Dropout, Conv2DTranspose, MaxPooling2D, BatchNormalization, Activation, concatenate, Input, GlobalAveragePooling2D
-from tensorflow.keras import Model
-from PIL import Image
-import random, re, math
-import tensorflow as tf, tensorflow.keras.backend as K
-from sklearn.metrics import f1_score
 
 # Generation 생성 시, 고정적으로 이미지 Augmentation 추가를 위한 
 def augmentation(x_train,y_train):
