@@ -64,7 +64,7 @@ def Xception(model_input):
         x = Add()([x, residual])
 
     ## Middle flow
-    for i in range(8):  # (19, 19, 728)
+    for i in range(8): 
         residual = x
 
         x = sepconv2d_bn(x, 256, (3, 3))
@@ -74,12 +74,12 @@ def Xception(model_input):
         x = Add()([x, residual])
 
     ## Exit flow
-    residual = conv2d_bn(x, 384, (1, 1), activation=None)  # (19, 19, 728) -> (10, 10, 1024)
+    residual = conv2d_bn(x, 384, (1, 1), activation=None)  
 
     x = Activation(activation='relu')(x)
     x = sepconv2d_bn(x, 256, (3, 3))
-    x = sepconv2d_bn(x, 384, (3, 3), activation=None)  # (19, 19, 728) -> (19, 19, 1024)
-    x4 = sepconv2d_bn(x, 384, (3, 3), activation=None)  # (19, 19, 1024) -> (10, 10, 1024)
+    x = sepconv2d_bn(x, 384, (3, 3), activation=None) 
+    x4 = sepconv2d_bn(x, 384, (3, 3), activation=None)  
 
     x = Add()([x, residual])
 
@@ -109,9 +109,72 @@ model_input = Input(shape=input_shape)
 
 model = Xception(model_input)
 
-# resnet---------------------------------------------------------------------------
-input_tensor = Input(shape=(40, 40, 1), dtype='float32', name='input')
 
+# Model (Pooling Layer를 사용하지 않음)---------------------------------------------------
+def conv2d_bn(x, filters, kernel_size, padding='same', strides=1, activation='relu', weight_decay=1e-5):
+    x = Conv2D(filters, kernel_size, padding=padding, strides=strides, kernel_regularizer=l2(weight_decay))(x)
+    x = BatchNormalization()(x)
+    if activation:
+        x = Activation(activation)(x)
+
+    return x
+
+def sepconv2d_bn(x, filters, kernel_size, padding='same', strides=1, activation='relu', weight_decay=1e-5,
+                 depth_multiplier=1):
+    x = SeparableConv2D(filters, kernel_size, padding=padding, strides=strides, depth_multiplier=depth_multiplier,
+                        depthwise_regularizer=l2(weight_decay), pointwise_regularizer=l2(weight_decay))(x)
+    x = BatchNormalization()(x)
+
+    if activation:
+        x = Activation(activation)(x)
+
+    return x
+
+
+def Xception(model_input):
+    ## Entry flow
+    x = conv2d_bn(model_input, 16, (3, 3))
+    x = conv2d_bn(x, 32, (3, 3))
+
+    for fliters in [64, 96, 128]: 
+        residual = conv2d_bn(x, fliters, (1, 1), activation=None)
+        x = Activation(activation='relu')(x)
+        x = sepconv2d_bn(x, fliters, (3, 3))
+        x = sepconv2d_bn(x, fliters, (3, 3), activation=None)
+        x = sepconv2d_bn(x, fliters, (3, 3), activation=None)            
+
+    ## Middle flow
+    for i in range(8):  # (19, 19, 728)
+        residual = x
+
+        x = sepconv2d_bn(x, 128, (3, 3))
+        x = sepconv2d_bn(x, 128, (3, 3))
+        x = sepconv2d_bn(x, 128, (3, 3), activation=None)
+
+        x = Add()([x, residual])
+
+    ## Exit flow
+    residual = conv2d_bn(x, 256, (1, 1), activation=None)  
+
+    x = Activation(activation='relu')(x)
+    x = sepconv2d_bn(x, 128, (3, 3))
+    x = sepconv2d_bn(x, 256, (3, 3), activation=None) 
+    x = Add()([x, residual])
+
+    x = conv2d_bn(x, 128, (3, 3))
+    x = conv2d_bn(x, 96, (3, 3))
+    x = conv2d_bn(x, 64, (3, 3))
+  
+    output_layer = Conv2D(1, (1,1), padding="same", activation='relu')(x)
+
+    model = Model(model_input, output_layer, name='Xception')
+    return model
+
+model_input = Input((40, 40, 10))
+
+model = Xception(model_input)
+
+# resnet---------------------------------------------------------------------------
 def conv1_layer(x):    
 #     x = ZeroPadding2D(padding=(3, 3))(x)
     x = Conv2D(32, (7, 7), strides=(1, 1), padding='same')(x)
@@ -294,11 +357,11 @@ x = conv3_layer(x)
 x = conv4_layer(x)
 x = conv5_layer(x)
  
-# x = GlobalAveragePooling2D()(x)
 output_tensor = Conv2D(1, (1,1), padding="same", activation='relu')(x)
- 
+
+input_tensor = Input(shape=(40, 40, 1), dtype='float32', name='input')
+
 resnet50 = Model(input_tensor, output_tensor)
-resnet50.summary()
 
 # Xception과 Resnet50 모델을 Trainable True or False로 설정하여 4개의 Model을 생성하였고,
 # Model Ensemble을 진행
